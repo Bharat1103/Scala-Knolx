@@ -1,0 +1,11 @@
+[0m[[0minfo[0m] [0m[32mSessionRepoImplTest:[0m[0m
+[0m[[0minfo[0m] [0m[32m- checking error in creating a session[0m[0m
+[0m[[0minfo[0m] [0m[32m- Create a Session[0m[0m
+[0m[[0minfo[0m] [0m[32m- checking error in updating session info[0m[0m
+[0m[[0minfo[0m] [0m[32m- Update a Session[0m[0m
+[0m[[0minfo[0m] [0m[32m- checking error in deleting a session[0m[0m
+[0m[[0minfo[0m] [0m[32m- Delete a Session[0m[0m
+[0m[[0minfo[0m] [0m[32m- checking error in fetching a sessoion record[0m[0m
+[0m[[0minfo[0m] [0m[32m- Get a particular Session info[0m[0m
+[0m[[0minfo[0m] [0m[32m- checking error in fetching a list of all available sessions[0m[0m
+[0m[[0minfo[0m] [0m[32m- Get a list of all available Sessions[0m[0m

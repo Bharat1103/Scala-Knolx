@@ -1,0 +1,12 @@
+[0m[[0minfo[0m] [0m[32mKnolRepoImplTest:[0m[0m
+[0m[[0minfo[0m] [0m[32m- checking error in getting connection with database[0m[0m
+[0m[[0minfo[0m] [0m[32m- Checking error in create method[0m[0m
+[0m[[0minfo[0m] [0m[32m- Create a Knolder[0m[0m
+[0m[[0minfo[0m] [0m[32m- checking error in update method[0m[0m
+[0m[[0minfo[0m] [0m[32m- Update a Knolder[0m[0m
+[0m[[0minfo[0m] [0m[32m- checking error in delete method[0m[0m
+[0m[[0minfo[0m] [0m[32m- Delete a Knolder[0m[0m
+[0m[[0minfo[0m] [0m[32m- checking error in fetching a knolder record[0m[0m
+[0m[[0minfo[0m] [0m[32m- Get a particular Knolder[0m[0m
+[0m[[0minfo[0m] [0m[32m- checking error in fetching a list of knolders[0m[0m
+[0m[[0minfo[0m] [0m[32m- Get a list of Knolders[0m[0m

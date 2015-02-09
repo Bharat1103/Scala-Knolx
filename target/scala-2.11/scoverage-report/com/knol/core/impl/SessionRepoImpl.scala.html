@@ -1,0 +1,2616 @@
+<html>
+      <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+        <title id="title">
+          com/knol/core/impl/SessionRepoImpl.scala.html
+        </title>
+        <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css"/>
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+        <script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
+        <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.18.3/addons/pager/jquery.tablesorter.pager.min.js"></script>
+        <style>
+          table.codegrid { font-family: monospace; font-size: 12px; width: auto!important; }table.statementlist { width: auto!important; font-size: 13px; } table.codegrid td { padding: 0!important; border: 0!important } table td.linenumber { width: 40px!important; } 
+        </style>
+      </head>
+      <body style="font-family: monospace;">
+        <ul class="nav nav-tabs">
+          <li>
+            <a href="#codegrid" data-toggle="tab">Codegrid</a>
+          </li>
+          <li>
+            <a href="#statementlist" data-toggle="tab">Statement List</a>
+          </li>
+        </ul>
+        <div class="tab-content">
+          <div class="tab-pane active" id="codegrid">
+            <pre style='font-size: 12pt; font-family: courier;'>1 <span style=''>package com.knol.core.impl
+</span>2 <span style=''>
+</span>3 <span style=''>import java.sql.PreparedStatement
+</span>4 <span style=''>import java.sql.SQLException
+</span>5 <span style=''>import java.sql.Statement
+</span>6 <span style=''>
+</span>7 <span style=''>import scala.collection.mutable.ListBuffer
+</span>8 <span style=''>
+</span>9 <span style=''>import com.knol.core.Session
+</span>10 <span style=''>import com.knol.core.SessionRepo
+</span>11 <span style=''>import com.knol.db.connection.DBConnection
+</span>12 <span style=''>
+</span>13 <span style=''>class SessionRepoImpl extends SessionRepo with DBConnection {
+</span>14 <span style=''>
+</span>15 <span style=''>  //Method to create a record in the knolder table.
+</span>16 <span style=''>
+</span>17 <span style=''>  def create(session: Session): Option[Int] = {
+</span>18 <span style=''>
+</span>19 <span style=''>    //Get connection to the database using method defined in DBConnection
+</span>20 <span style=''>
+</span>21 <span style=''>    val connection = </span><span style='background: #AEF1AE'>getConnection(None)</span><span style=''>
+</span>22 <span style=''>
+</span>23 <span style=''>    try {
+</span>24 <span style=''>      </span><span style='background: #AEF1AE'>connection match {
+</span>25 <span style=''></span><span style='background: #AEF1AE'>        case Some(conn) => {
+</span>26 <span style=''></span><span style='background: #AEF1AE'>          val query = "INSERT INTO knolx(Topic,Date,Knol_Id) VALUES(?,?,?)"
+</span>27 <span style=''></span><span style='background: #AEF1AE'>
+</span>28 <span style=''></span><span style='background: #AEF1AE'>          // Allow the statement to return the auto generated keys
+</span>29 <span style=''></span><span style='background: #AEF1AE'>
+</span>30 <span style=''></span><span style='background: #AEF1AE'>          val preparedStatement: PreparedStatement =
+</span>31 <span style=''></span><span style='background: #AEF1AE'>            conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)
+</span>32 <span style=''></span><span style='background: #AEF1AE'>
+</span>33 <span style=''></span><span style='background: #AEF1AE'>          preparedStatement.setString(1, session.topic)
+</span>34 <span style=''></span><span style='background: #AEF1AE'>          preparedStatement.setString(2, session.date)
+</span>35 <span style=''></span><span style='background: #AEF1AE'>          preparedStatement.setInt(3, session.knolId)
+</span>36 <span style=''></span><span style='background: #AEF1AE'>          preparedStatement.execute()
+</span>37 <span style=''></span><span style='background: #AEF1AE'>
+</span>38 <span style=''></span><span style='background: #AEF1AE'>          logger.debug("Created a Session with insert")
+</span>39 <span style=''></span><span style='background: #AEF1AE'>
+</span>40 <span style=''></span><span style='background: #AEF1AE'>          //Return the auto incremented Id from the knolder table
+</span>41 <span style=''></span><span style='background: #AEF1AE'>          val rs = preparedStatement.getGeneratedKeys()
+</span>42 <span style=''></span><span style='background: #AEF1AE'>          rs.next()
+</span>43 <span style=''></span><span style='background: #AEF1AE'>          Some(rs.getInt(1))
+</span>44 <span style=''></span><span style='background: #AEF1AE'>        }
+</span>45 <span style=''></span><span style='background: #AEF1AE'>        case None => </span><span style='background: #F0ADAD'>None</span><span style='background: #AEF1AE'>
+</span>46 <span style=''></span><span style='background: #AEF1AE'>      }</span><span style=''>
+</span>47 <span style=''>    } catch {
+</span>48 <span style=''>      case sqlEx: SQLException =>
+</span>49 <span style=''>        {
+</span>50 <span style=''>          </span><span style='background: #AEF1AE'>logger.error("\nError Occured: Insertion unsuccessful\n")</span><span style=''>
+</span>51 <span style=''>          </span><span style='background: #AEF1AE'>None</span><span style=''>
+</span>52 <span style=''>        }
+</span>53 <span style=''>    } finally {
+</span>54 <span style=''>      </span><span style='background: #AEF1AE'>connection match {
+</span>55 <span style=''></span><span style='background: #AEF1AE'>        case Some(conn) => conn.close()
+</span>56 <span style=''></span><span style='background: #AEF1AE'>        case None       </span><span style='background: #F0ADAD'>=></span><span style='background: #AEF1AE'>
+</span>57 <span style=''></span><span style='background: #AEF1AE'>      }</span><span style=''>
+</span>58 <span style=''>    }
+</span>59 <span style=''>
+</span>60 <span style=''>  }
+</span>61 <span style=''>
+</span>62 <span style=''>  //Method to update already existing record in the knolder table
+</span>63 <span style=''>
+</span>64 <span style=''>  def update(session: Session): Int =
+</span>65 <span style=''>    {
+</span>66 <span style=''>
+</span>67 <span style=''>      //Get connection to the database using method defined in DBConnection
+</span>68 <span style=''>
+</span>69 <span style=''>      val connection = </span><span style='background: #AEF1AE'>getConnection(None)</span><span style=''>
+</span>70 <span style=''>
+</span>71 <span style=''>      try {
+</span>72 <span style=''>
+</span>73 <span style=''>        </span><span style='background: #AEF1AE'>connection match {
+</span>74 <span style=''></span><span style='background: #AEF1AE'>          case Some(conn) => {
+</span>75 <span style=''></span><span style='background: #AEF1AE'>            val preparedStatement = conn.prepareStatement("UPDATE knolx SET Topic='New Topic', Date='12/10/2015' "
+</span>76 <span style=''></span><span style='background: #AEF1AE'>              + "WHERE Knol_Id =?")
+</span>77 <span style=''></span><span style='background: #AEF1AE'>            preparedStatement.setInt(1, session.knolId)
+</span>78 <span style=''></span><span style='background: #AEF1AE'>            logger.debug("Updating a Session record")
+</span>79 <span style=''></span><span style='background: #AEF1AE'>            preparedStatement.executeUpdate();
+</span>80 <span style=''></span><span style='background: #AEF1AE'>          }
+</span>81 <span style=''></span><span style='background: #AEF1AE'>
+</span>82 <span style=''></span><span style='background: #AEF1AE'>          case None => -</span><span style='background: #F0ADAD'>1</span><span style='background: #AEF1AE'>
+</span>83 <span style=''></span><span style='background: #AEF1AE'>        }</span><span style=''>
+</span>84 <span style=''>      } catch {
+</span>85 <span style=''>        case sqlx: SQLException => {
+</span>86 <span style=''>          </span><span style='background: #AEF1AE'>logger.error("Error Occured: update failed")</span><span style=''>
+</span>87 <span style=''>          </span><span style='background: #AEF1AE'>0</span><span style=''>
+</span>88 <span style=''>        }
+</span>89 <span style=''>      } finally {
+</span>90 <span style=''>        </span><span style='background: #AEF1AE'>connection match {
+</span>91 <span style=''></span><span style='background: #AEF1AE'>          case Some(conn) => conn.close()
+</span>92 <span style=''></span><span style='background: #AEF1AE'>          case None       </span><span style='background: #F0ADAD'>=></span><span style='background: #AEF1AE'>
+</span>93 <span style=''></span><span style='background: #AEF1AE'>            }</span><span style=''>
+</span>94 <span style=''>        }
+</span>95 <span style=''>    }
+</span>96 <span style=''>
+</span>97 <span style=''>  //Method to delete a record from the knolder table
+</span>98 <span style=''>
+</span>99 <span style=''>  def delete(id: Int): Int =
+</span>100 <span style=''>    {
+</span>101 <span style=''>
+</span>102 <span style=''>      //Get connection to the database using method defined in DBConnection
+</span>103 <span style=''>
+</span>104 <span style=''>      val connection = </span><span style='background: #AEF1AE'>getConnection(None)</span><span style=''>
+</span>105 <span style=''>
+</span>106 <span style=''>      try {
+</span>107 <span style=''>
+</span>108 <span style=''>        </span><span style='background: #AEF1AE'>connection match {
+</span>109 <span style=''></span><span style='background: #AEF1AE'>          case Some(conn) => {
+</span>110 <span style=''></span><span style='background: #AEF1AE'>            val preparedStatement: PreparedStatement =
+</span>111 <span style=''></span><span style='background: #AEF1AE'>              conn.prepareStatement("DELETE FROM knolx WHERE Id=?")
+</span>112 <span style=''></span><span style='background: #AEF1AE'>            preparedStatement.setInt(1, id)
+</span>113 <span style=''></span><span style='background: #AEF1AE'>            logger.debug("Deleting a Session record")
+</span>114 <span style=''></span><span style='background: #AEF1AE'>            preparedStatement.executeUpdate()
+</span>115 <span style=''></span><span style='background: #AEF1AE'>          }
+</span>116 <span style=''></span><span style='background: #AEF1AE'>          case None => -</span><span style='background: #F0ADAD'>1</span><span style='background: #AEF1AE'>
+</span>117 <span style=''></span><span style='background: #AEF1AE'>        }</span><span style=''>
+</span>118 <span style=''>      } catch {
+</span>119 <span style=''>        case sqlEx: SQLException => {
+</span>120 <span style=''>          </span><span style='background: #AEF1AE'>logger.error("Error Occured: Cannot delete the record")</span><span style=''>
+</span>121 <span style=''>          </span><span style='background: #AEF1AE'>0</span><span style=''>
+</span>122 <span style=''>        }
+</span>123 <span style=''>      } finally {
+</span>124 <span style=''>        </span><span style='background: #AEF1AE'>connection match {
+</span>125 <span style=''></span><span style='background: #AEF1AE'>          case Some(conn) => conn.close()
+</span>126 <span style=''></span><span style='background: #AEF1AE'>          case None       </span><span style='background: #F0ADAD'>=></span><span style='background: #AEF1AE'>
+</span>127 <span style=''></span><span style='background: #AEF1AE'>            }</span><span style=''>
+</span>128 <span style=''>        }
+</span>129 <span style=''>    }
+</span>130 <span style=''>
+</span>131 <span style=''>  //Method to fetch a particular record from the knolder table
+</span>132 <span style=''>
+</span>133 <span style=''>  def getSession(Id: Int): Option[Session] =
+</span>134 <span style=''>    {
+</span>135 <span style=''>      //Get connection to the database using method defined in DBConnection
+</span>136 <span style=''>
+</span>137 <span style=''>      val connection = </span><span style='background: #AEF1AE'>getConnection(None)</span><span style=''>
+</span>138 <span style=''>
+</span>139 <span style=''>      try {
+</span>140 <span style=''>
+</span>141 <span style=''>        </span><span style='background: #AEF1AE'>connection match {
+</span>142 <span style=''></span><span style='background: #AEF1AE'>          case Some(conn) => {
+</span>143 <span style=''></span><span style='background: #AEF1AE'>            val preparedStatement: PreparedStatement =
+</span>144 <span style=''></span><span style='background: #AEF1AE'>              conn.prepareStatement("SELECT * FROM knolx WHERE Id=?")
+</span>145 <span style=''></span><span style='background: #AEF1AE'>
+</span>146 <span style=''></span><span style='background: #AEF1AE'>            preparedStatement.setInt(1, Id)
+</span>147 <span style=''></span><span style='background: #AEF1AE'>
+</span>148 <span style=''></span><span style='background: #AEF1AE'>            val rs = preparedStatement.executeQuery()
+</span>149 <span style=''></span><span style='background: #AEF1AE'>
+</span>150 <span style=''></span><span style='background: #AEF1AE'>            val buf = new ListBuffer[Session]
+</span>151 <span style=''></span><span style='background: #AEF1AE'>
+</span>152 <span style=''></span><span style='background: #AEF1AE'>            while (rs.next()) {
+</span>153 <span style=''></span><span style='background: #AEF1AE'>
+</span>154 <span style=''></span><span style='background: #AEF1AE'>              buf += Session((rs.getString("Topic")),
+</span>155 <span style=''></span><span style='background: #AEF1AE'>                (rs.getString("Date")),
+</span>156 <span style=''></span><span style='background: #AEF1AE'>                (rs.getInt("Knol_Id")),
+</span>157 <span style=''></span><span style='background: #AEF1AE'>                Some((rs.getInt("Id"))))
+</span>158 <span style=''></span><span style='background: #AEF1AE'>            }
+</span>159 <span style=''></span><span style='background: #AEF1AE'>            val Ls = buf.toList
+</span>160 <span style=''></span><span style='background: #AEF1AE'>            logger.debug("Fetching a Session record")
+</span>161 <span style=''></span><span style='background: #AEF1AE'>            Ls.headOption
+</span>162 <span style=''></span><span style='background: #AEF1AE'>          }
+</span>163 <span style=''></span><span style='background: #AEF1AE'>          case None => </span><span style='background: #F0ADAD'>None</span><span style='background: #AEF1AE'>
+</span>164 <span style=''></span><span style='background: #AEF1AE'>        }</span><span style=''>
+</span>165 <span style=''>      } catch {
+</span>166 <span style=''>        case sqlEx: SQLException =>
+</span>167 <span style=''>          </span><span style='background: #AEF1AE'>logger.error("Error Occured: Cannot fetch the record")</span><span style=''>
+</span>168 <span style=''>          </span><span style='background: #AEF1AE'>None</span><span style=''>
+</span>169 <span style=''>      } finally {
+</span>170 <span style=''>        </span><span style='background: #AEF1AE'>connection match {
+</span>171 <span style=''></span><span style='background: #AEF1AE'>          case Some(conn) => conn.close()
+</span>172 <span style=''></span><span style='background: #AEF1AE'>          case None       </span><span style='background: #F0ADAD'>=></span><span style='background: #AEF1AE'>
+</span>173 <span style=''></span><span style='background: #AEF1AE'>            }</span><span style=''>
+</span>174 <span style=''>        }
+</span>175 <span style=''>    }
+</span>176 <span style=''>
+</span>177 <span style=''>  //Method to fetch all the records from knolder table
+</span>178 <span style=''>
+</span>179 <span style=''>  def getList(): List[Session] =
+</span>180 <span style=''>    {
+</span>181 <span style=''>
+</span>182 <span style=''>      //Get connection to the database using method defined in DBConnection
+</span>183 <span style=''>
+</span>184 <span style=''>      val connection = </span><span style='background: #AEF1AE'>getConnection(None)</span><span style=''>
+</span>185 <span style=''>
+</span>186 <span style=''>      try {
+</span>187 <span style=''>
+</span>188 <span style=''>        </span><span style='background: #AEF1AE'>connection match {
+</span>189 <span style=''></span><span style='background: #AEF1AE'>          case Some(conn) => {
+</span>190 <span style=''></span><span style='background: #AEF1AE'>            val statement: Statement = conn.createStatement()
+</span>191 <span style=''></span><span style='background: #AEF1AE'>            val rs = statement.executeQuery("SELECT * FROM knolx")
+</span>192 <span style=''></span><span style='background: #AEF1AE'>            val buf = new ListBuffer[Session]
+</span>193 <span style=''></span><span style='background: #AEF1AE'>
+</span>194 <span style=''></span><span style='background: #AEF1AE'>            while (rs.next()) {
+</span>195 <span style=''></span><span style='background: #AEF1AE'>              buf += Session((rs.getString("Topic")),
+</span>196 <span style=''></span><span style='background: #AEF1AE'>                (rs.getString("Date")),
+</span>197 <span style=''></span><span style='background: #AEF1AE'>                (rs.getInt("Knol_Id")),
+</span>198 <span style=''></span><span style='background: #AEF1AE'>                Some((rs.getInt("Id"))))
+</span>199 <span style=''></span><span style='background: #AEF1AE'>            }
+</span>200 <span style=''></span><span style='background: #AEF1AE'>            logger.debug("Fetching a List of all available Session records")
+</span>201 <span style=''></span><span style='background: #AEF1AE'>
+</span>202 <span style=''></span><span style='background: #AEF1AE'>            buf.toList
+</span>203 <span style=''></span><span style='background: #AEF1AE'>          }
+</span>204 <span style=''></span><span style='background: #AEF1AE'>          case None => </span><span style='background: #F0ADAD'>List()</span><span style='background: #AEF1AE'>
+</span>205 <span style=''></span><span style='background: #AEF1AE'>        }</span><span style=''>
+</span>206 <span style=''>      } catch {
+</span>207 <span style=''>        case sqlEx: SQLException =>
+</span>208 <span style=''>          </span><span style='background: #AEF1AE'>logger.error("Error Occured: Cannot fetch list")</span><span style=''>
+</span>209 <span style=''>          </span><span style='background: #AEF1AE'>List()</span><span style=''>
+</span>210 <span style=''>      } finally {
+</span>211 <span style=''>        </span><span style='background: #AEF1AE'>connection match {
+</span>212 <span style=''></span><span style='background: #AEF1AE'>          case Some(conn) => conn.close()
+</span>213 <span style=''></span><span style='background: #AEF1AE'>          case None       </span><span style='background: #F0ADAD'>=></span><span style='background: #AEF1AE'>
+</span>214 <span style=''></span><span style='background: #AEF1AE'>            }</span><span style=''>
+</span>215 <span style=''>        }
+</span>216 <span style=''>    }
+</span>217 <span style=''>}
+</span></pre>
+          </div>
+          <div class="tab-pane" id="statementlist">
+            <table cellspacing="0" cellpadding="0" class="table statementlist">
+      <tr>
+        <th>Line</th>
+        <th>Stmt Id</th>
+        <th>Pos</th>
+        <th>Tree</th>
+        <th>Symbol</th>
+        <th>Code</th>
+      </tr><tr>
+        <td>
+          21
+        </td>
+        <td>
+          140
+        </td>
+        <td>
+          529
+          -
+          548
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          com.knol.db.connection.DBConnection.getConnection
+        </td>
+        <td style="background: #AEF1AE">
+          SessionRepoImpl.this.getConnection(scala.None)
+        </td>
+      </tr><tr>
+        <td>
+          21
+        </td>
+        <td>
+          139
+        </td>
+        <td>
+          543
+          -
+          547
+        </td>
+        <td>
+          Select
+        </td>
+        <td>
+          scala.None
+        </td>
+        <td style="background: #AEF1AE">
+          scala.None
+        </td>
+      </tr><tr>
+        <td>
+          24
+        </td>
+        <td>
+          159
+        </td>
+        <td>
+          566
+          -
+          1362
+        </td>
+        <td>
+          Match
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          connection match {
+  case (x: java.sql.Connection)Some[java.sql.Connection]((conn @ _)) =&gt; {
+    val query: String = &quot;INSERT INTO knolx(Topic,Date,Knol_Id) VALUES(?,?,?)&quot;;
+    val preparedStatement: java.sql.PreparedStatement = conn.prepareStatement(query, 1);
+    preparedStatement.setString(1, session.topic);
+    preparedStatement.setString(2, session.date);
+    preparedStatement.setInt(3, session.knolId);
+    preparedStatement.execute();
+    SessionRepoImpl.this.logger.debug(&quot;Created a Session with insert&quot;);
+    val rs: java.sql.ResultSet = preparedStatement.getGeneratedKeys();
+    rs.next();
+    scala.Some.apply[Int](rs.getInt(1))
+  }
+  case scala.None =&gt; scala.None
+}
+        </td>
+      </tr><tr>
+        <td>
+          26
+        </td>
+        <td>
+          141
+        </td>
+        <td>
+          636
+          -
+          689
+        </td>
+        <td>
+          Literal
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          &quot;INSERT INTO knolx(Topic,Date,Knol_Id) VALUES(?,?,?)&quot;
+        </td>
+      </tr><tr>
+        <td>
+          31
+        </td>
+        <td>
+          142
+        </td>
+        <td>
+          824
+          -
+          885
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.Connection.prepareStatement
+        </td>
+        <td style="background: #AEF1AE">
+          conn.prepareStatement(query, 1)
+        </td>
+      </tr><tr>
+        <td>
+          33
+        </td>
+        <td>
+          145
+        </td>
+        <td>
+          897
+          -
+          942
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.PreparedStatement.setString
+        </td>
+        <td style="background: #AEF1AE">
+          preparedStatement.setString(1, session.topic)
+        </td>
+      </tr><tr>
+        <td>
+          33
+        </td>
+        <td>
+          144
+        </td>
+        <td>
+          928
+          -
+          941
+        </td>
+        <td>
+          Select
+        </td>
+        <td>
+          com.knol.core.Session.topic
+        </td>
+        <td style="background: #AEF1AE">
+          session.topic
+        </td>
+      </tr><tr>
+        <td>
+          33
+        </td>
+        <td>
+          143
+        </td>
+        <td>
+          925
+          -
+          926
+        </td>
+        <td>
+          Literal
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          1
+        </td>
+      </tr><tr>
+        <td>
+          34
+        </td>
+        <td>
+          146
+        </td>
+        <td>
+          981
+          -
+          982
+        </td>
+        <td>
+          Literal
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          2
+        </td>
+      </tr><tr>
+        <td>
+          34
+        </td>
+        <td>
+          148
+        </td>
+        <td>
+          953
+          -
+          997
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.PreparedStatement.setString
+        </td>
+        <td style="background: #AEF1AE">
+          preparedStatement.setString(2, session.date)
+        </td>
+      </tr><tr>
+        <td>
+          34
+        </td>
+        <td>
+          147
+        </td>
+        <td>
+          984
+          -
+          996
+        </td>
+        <td>
+          Select
+        </td>
+        <td>
+          com.knol.core.Session.date
+        </td>
+        <td style="background: #AEF1AE">
+          session.date
+        </td>
+      </tr><tr>
+        <td>
+          35
+        </td>
+        <td>
+          149
+        </td>
+        <td>
+          1033
+          -
+          1034
+        </td>
+        <td>
+          Literal
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          3
+        </td>
+      </tr><tr>
+        <td>
+          35
+        </td>
+        <td>
+          151
+        </td>
+        <td>
+          1008
+          -
+          1051
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.PreparedStatement.setInt
+        </td>
+        <td style="background: #AEF1AE">
+          preparedStatement.setInt(3, session.knolId)
+        </td>
+      </tr><tr>
+        <td>
+          35
+        </td>
+        <td>
+          150
+        </td>
+        <td>
+          1036
+          -
+          1050
+        </td>
+        <td>
+          Select
+        </td>
+        <td>
+          com.knol.core.Session.knolId
+        </td>
+        <td style="background: #AEF1AE">
+          session.knolId
+        </td>
+      </tr><tr>
+        <td>
+          36
+        </td>
+        <td>
+          152
+        </td>
+        <td>
+          1062
+          -
+          1089
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.PreparedStatement.execute
+        </td>
+        <td style="background: #AEF1AE">
+          preparedStatement.execute()
+        </td>
+      </tr><tr>
+        <td>
+          38
+        </td>
+        <td>
+          153
+        </td>
+        <td>
+          1101
+          -
+          1146
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          org.slf4j.Logger.debug
+        </td>
+        <td style="background: #AEF1AE">
+          SessionRepoImpl.this.logger.debug(&quot;Created a Session with insert&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          41
+        </td>
+        <td>
+          154
+        </td>
+        <td>
+          1233
+          -
+          1269
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.Statement.getGeneratedKeys
+        </td>
+        <td style="background: #AEF1AE">
+          preparedStatement.getGeneratedKeys()
+        </td>
+      </tr><tr>
+        <td>
+          42
+        </td>
+        <td>
+          155
+        </td>
+        <td>
+          1280
+          -
+          1289
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.ResultSet.next
+        </td>
+        <td style="background: #AEF1AE">
+          rs.next()
+        </td>
+      </tr><tr>
+        <td>
+          43
+        </td>
+        <td>
+          157
+        </td>
+        <td>
+          1300
+          -
+          1318
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          scala.Some.apply
+        </td>
+        <td style="background: #AEF1AE">
+          scala.Some.apply[Int](rs.getInt(1))
+        </td>
+      </tr><tr>
+        <td>
+          43
+        </td>
+        <td>
+          156
+        </td>
+        <td>
+          1305
+          -
+          1317
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.ResultSet.getInt
+        </td>
+        <td style="background: #AEF1AE">
+          rs.getInt(1)
+        </td>
+      </tr><tr>
+        <td>
+          45
+        </td>
+        <td>
+          158
+        </td>
+        <td>
+          1350
+          -
+          1354
+        </td>
+        <td>
+          Select
+        </td>
+        <td>
+          scala.None
+        </td>
+        <td style="background: #F0ADAD">
+          scala.None
+        </td>
+      </tr><tr>
+        <td>
+          50
+        </td>
+        <td>
+          160
+        </td>
+        <td>
+          1431
+          -
+          1488
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          org.slf4j.Logger.error
+        </td>
+        <td style="background: #AEF1AE">
+          SessionRepoImpl.this.logger.error(&quot;\nError Occured: Insertion unsuccessful\n&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          51
+        </td>
+        <td>
+          161
+        </td>
+        <td>
+          1499
+          -
+          1503
+        </td>
+        <td>
+          Select
+        </td>
+        <td>
+          scala.None
+        </td>
+        <td style="background: #AEF1AE">
+          scala.None
+        </td>
+      </tr><tr>
+        <td>
+          54
+        </td>
+        <td>
+          164
+        </td>
+        <td>
+          1536
+          -
+          1629
+        </td>
+        <td>
+          Match
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          connection match {
+  case (x: java.sql.Connection)Some[java.sql.Connection]((conn @ _)) =&gt; conn.close()
+  case scala.None =&gt; ()
+}
+        </td>
+      </tr><tr>
+        <td>
+          55
+        </td>
+        <td>
+          162
+        </td>
+        <td>
+          1582
+          -
+          1594
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.Connection.close
+        </td>
+        <td style="background: #AEF1AE">
+          conn.close()
+        </td>
+      </tr><tr>
+        <td>
+          56
+        </td>
+        <td>
+          163
+        </td>
+        <td>
+          1619
+          -
+          1621
+        </td>
+        <td>
+          Literal
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #F0ADAD">
+          ()
+        </td>
+      </tr><tr>
+        <td>
+          69
+        </td>
+        <td>
+          166
+        </td>
+        <td>
+          1854
+          -
+          1873
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          com.knol.db.connection.DBConnection.getConnection
+        </td>
+        <td style="background: #AEF1AE">
+          SessionRepoImpl.this.getConnection(scala.None)
+        </td>
+      </tr><tr>
+        <td>
+          69
+        </td>
+        <td>
+          165
+        </td>
+        <td>
+          1868
+          -
+          1872
+        </td>
+        <td>
+          Select
+        </td>
+        <td>
+          scala.None
+        </td>
+        <td style="background: #AEF1AE">
+          scala.None
+        </td>
+      </tr><tr>
+        <td>
+          73
+        </td>
+        <td>
+          174
+        </td>
+        <td>
+          1896
+          -
+          2302
+        </td>
+        <td>
+          Match
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          connection match {
+  case (x: java.sql.Connection)Some[java.sql.Connection]((conn @ _)) =&gt; {
+    val preparedStatement: java.sql.PreparedStatement = conn.prepareStatement(&quot;UPDATE knolx SET Topic=\'New Topic\', Date=\'12/10/2015\' WHERE Knol_Id =?&quot;);
+    preparedStatement.setInt(1, session.knolId);
+    SessionRepoImpl.this.logger.debug(&quot;Updating a Session record&quot;);
+    preparedStatement.executeUpdate()
+  }
+  case scala.None =&gt; -1
+}
+        </td>
+      </tr><tr>
+        <td>
+          75
+        </td>
+        <td>
+          167
+        </td>
+        <td>
+          1982
+          -
+          2096
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.Connection.prepareStatement
+        </td>
+        <td style="background: #AEF1AE">
+          conn.prepareStatement(&quot;UPDATE knolx SET Topic=\'New Topic\', Date=\'12/10/2015\' WHERE Knol_Id =?&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          77
+        </td>
+        <td>
+          169
+        </td>
+        <td>
+          2137
+          -
+          2151
+        </td>
+        <td>
+          Select
+        </td>
+        <td>
+          com.knol.core.Session.knolId
+        </td>
+        <td style="background: #AEF1AE">
+          session.knolId
+        </td>
+      </tr><tr>
+        <td>
+          77
+        </td>
+        <td>
+          168
+        </td>
+        <td>
+          2134
+          -
+          2135
+        </td>
+        <td>
+          Literal
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          1
+        </td>
+      </tr><tr>
+        <td>
+          77
+        </td>
+        <td>
+          170
+        </td>
+        <td>
+          2109
+          -
+          2152
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.PreparedStatement.setInt
+        </td>
+        <td style="background: #AEF1AE">
+          preparedStatement.setInt(1, session.knolId)
+        </td>
+      </tr><tr>
+        <td>
+          78
+        </td>
+        <td>
+          171
+        </td>
+        <td>
+          2165
+          -
+          2206
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          org.slf4j.Logger.debug
+        </td>
+        <td style="background: #AEF1AE">
+          SessionRepoImpl.this.logger.debug(&quot;Updating a Session record&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          79
+        </td>
+        <td>
+          172
+        </td>
+        <td>
+          2219
+          -
+          2252
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.PreparedStatement.executeUpdate
+        </td>
+        <td style="background: #AEF1AE">
+          preparedStatement.executeUpdate()
+        </td>
+      </tr><tr>
+        <td>
+          82
+        </td>
+        <td>
+          173
+        </td>
+        <td>
+          2291
+          -
+          2292
+        </td>
+        <td>
+          Literal
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #F0ADAD">
+          -1
+        </td>
+      </tr><tr>
+        <td>
+          86
+        </td>
+        <td>
+          175
+        </td>
+        <td>
+          2366
+          -
+          2410
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          org.slf4j.Logger.error
+        </td>
+        <td style="background: #AEF1AE">
+          SessionRepoImpl.this.logger.error(&quot;Error Occured: update failed&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          87
+        </td>
+        <td>
+          176
+        </td>
+        <td>
+          2421
+          -
+          2422
+        </td>
+        <td>
+          Literal
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          0
+        </td>
+      </tr><tr>
+        <td>
+          90
+        </td>
+        <td>
+          179
+        </td>
+        <td>
+          2459
+          -
+          2562
+        </td>
+        <td>
+          Match
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          connection match {
+  case (x: java.sql.Connection)Some[java.sql.Connection]((conn @ _)) =&gt; conn.close()
+  case scala.None =&gt; ()
+}
+        </td>
+      </tr><tr>
+        <td>
+          91
+        </td>
+        <td>
+          177
+        </td>
+        <td>
+          2507
+          -
+          2519
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.Connection.close
+        </td>
+        <td style="background: #AEF1AE">
+          conn.close()
+        </td>
+      </tr><tr>
+        <td>
+          92
+        </td>
+        <td>
+          178
+        </td>
+        <td>
+          2546
+          -
+          2548
+        </td>
+        <td>
+          Literal
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #F0ADAD">
+          ()
+        </td>
+      </tr><tr>
+        <td>
+          104
+        </td>
+        <td>
+          181
+        </td>
+        <td>
+          2770
+          -
+          2789
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          com.knol.db.connection.DBConnection.getConnection
+        </td>
+        <td style="background: #AEF1AE">
+          SessionRepoImpl.this.getConnection(scala.None)
+        </td>
+      </tr><tr>
+        <td>
+          104
+        </td>
+        <td>
+          180
+        </td>
+        <td>
+          2784
+          -
+          2788
+        </td>
+        <td>
+          Select
+        </td>
+        <td>
+          scala.None
+        </td>
+        <td style="background: #AEF1AE">
+          scala.None
+        </td>
+      </tr><tr>
+        <td>
+          108
+        </td>
+        <td>
+          187
+        </td>
+        <td>
+          2812
+          -
+          3176
+        </td>
+        <td>
+          Match
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          connection match {
+  case (x: java.sql.Connection)Some[java.sql.Connection]((conn @ _)) =&gt; {
+    val preparedStatement: java.sql.PreparedStatement = conn.prepareStatement(&quot;DELETE FROM knolx WHERE Id=?&quot;);
+    preparedStatement.setInt(1, id);
+    SessionRepoImpl.this.logger.debug(&quot;Deleting a Session record&quot;);
+    preparedStatement.executeUpdate()
+  }
+  case scala.None =&gt; -1
+}
+        </td>
+      </tr><tr>
+        <td>
+          111
+        </td>
+        <td>
+          182
+        </td>
+        <td>
+          2931
+          -
+          2984
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.Connection.prepareStatement
+        </td>
+        <td style="background: #AEF1AE">
+          conn.prepareStatement(&quot;DELETE FROM knolx WHERE Id=?&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          112
+        </td>
+        <td>
+          183
+        </td>
+        <td>
+          2997
+          -
+          3028
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.PreparedStatement.setInt
+        </td>
+        <td style="background: #AEF1AE">
+          preparedStatement.setInt(1, id)
+        </td>
+      </tr><tr>
+        <td>
+          113
+        </td>
+        <td>
+          184
+        </td>
+        <td>
+          3041
+          -
+          3082
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          org.slf4j.Logger.debug
+        </td>
+        <td style="background: #AEF1AE">
+          SessionRepoImpl.this.logger.debug(&quot;Deleting a Session record&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          114
+        </td>
+        <td>
+          185
+        </td>
+        <td>
+          3095
+          -
+          3128
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.PreparedStatement.executeUpdate
+        </td>
+        <td style="background: #AEF1AE">
+          preparedStatement.executeUpdate()
+        </td>
+      </tr><tr>
+        <td>
+          116
+        </td>
+        <td>
+          186
+        </td>
+        <td>
+          3165
+          -
+          3166
+        </td>
+        <td>
+          Literal
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #F0ADAD">
+          -1
+        </td>
+      </tr><tr>
+        <td>
+          120
+        </td>
+        <td>
+          188
+        </td>
+        <td>
+          3241
+          -
+          3296
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          org.slf4j.Logger.error
+        </td>
+        <td style="background: #AEF1AE">
+          SessionRepoImpl.this.logger.error(&quot;Error Occured: Cannot delete the record&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          121
+        </td>
+        <td>
+          189
+        </td>
+        <td>
+          3307
+          -
+          3308
+        </td>
+        <td>
+          Literal
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          0
+        </td>
+      </tr><tr>
+        <td>
+          124
+        </td>
+        <td>
+          192
+        </td>
+        <td>
+          3345
+          -
+          3448
+        </td>
+        <td>
+          Match
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          connection match {
+  case (x: java.sql.Connection)Some[java.sql.Connection]((conn @ _)) =&gt; conn.close()
+  case scala.None =&gt; ()
+}
+        </td>
+      </tr><tr>
+        <td>
+          125
+        </td>
+        <td>
+          190
+        </td>
+        <td>
+          3393
+          -
+          3405
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.Connection.close
+        </td>
+        <td style="background: #AEF1AE">
+          conn.close()
+        </td>
+      </tr><tr>
+        <td>
+          126
+        </td>
+        <td>
+          191
+        </td>
+        <td>
+          3432
+          -
+          3434
+        </td>
+        <td>
+          Literal
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #F0ADAD">
+          ()
+        </td>
+      </tr><tr>
+        <td>
+          137
+        </td>
+        <td>
+          194
+        </td>
+        <td>
+          3681
+          -
+          3700
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          com.knol.db.connection.DBConnection.getConnection
+        </td>
+        <td style="background: #AEF1AE">
+          SessionRepoImpl.this.getConnection(scala.None)
+        </td>
+      </tr><tr>
+        <td>
+          137
+        </td>
+        <td>
+          193
+        </td>
+        <td>
+          3695
+          -
+          3699
+        </td>
+        <td>
+          Select
+        </td>
+        <td>
+          scala.None
+        </td>
+        <td style="background: #AEF1AE">
+          scala.None
+        </td>
+      </tr><tr>
+        <td>
+          141
+        </td>
+        <td>
+          215
+        </td>
+        <td>
+          3723
+          -
+          4429
+        </td>
+        <td>
+          Match
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          connection match {
+  case (x: java.sql.Connection)Some[java.sql.Connection]((conn @ _)) =&gt; {
+    val preparedStatement: java.sql.PreparedStatement = conn.prepareStatement(&quot;SELECT * FROM knolx WHERE Id=?&quot;);
+    preparedStatement.setInt(1, Id);
+    val rs: java.sql.ResultSet = preparedStatement.executeQuery();
+    val buf: scala.collection.mutable.ListBuffer[com.knol.core.Session] = new scala.collection.mutable.ListBuffer[com.knol.core.Session]();
+    while$1(){
+      if (rs.next())
+        {
+          buf.+=(com.knol.core.Session.apply(rs.getString(&quot;Topic&quot;), rs.getString(&quot;Date&quot;), rs.getInt(&quot;Knol_Id&quot;), scala.Some.apply[Int](rs.getInt(&quot;Id&quot;))));
+          while$1()
+        }
+      else
+        ()
+    };
+    val Ls: List[com.knol.core.Session] = buf.toList;
+    SessionRepoImpl.this.logger.debug(&quot;Fetching a Session record&quot;);
+    Ls.headOption
+  }
+  case scala.None =&gt; scala.None
+}
+        </td>
+      </tr><tr>
+        <td>
+          144
+        </td>
+        <td>
+          195
+        </td>
+        <td>
+          3842
+          -
+          3897
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.Connection.prepareStatement
+        </td>
+        <td style="background: #AEF1AE">
+          conn.prepareStatement(&quot;SELECT * FROM knolx WHERE Id=?&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          146
+        </td>
+        <td>
+          196
+        </td>
+        <td>
+          3911
+          -
+          3942
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.PreparedStatement.setInt
+        </td>
+        <td style="background: #AEF1AE">
+          preparedStatement.setInt(1, Id)
+        </td>
+      </tr><tr>
+        <td>
+          148
+        </td>
+        <td>
+          197
+        </td>
+        <td>
+          3965
+          -
+          3997
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.PreparedStatement.executeQuery
+        </td>
+        <td style="background: #AEF1AE">
+          preparedStatement.executeQuery()
+        </td>
+      </tr><tr>
+        <td>
+          150
+        </td>
+        <td>
+          198
+        </td>
+        <td>
+          4021
+          -
+          4044
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          scala.collection.mutable.ListBuffer.&lt;init&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          new scala.collection.mutable.ListBuffer[com.knol.core.Session]()
+        </td>
+      </tr><tr>
+        <td>
+          152
+        </td>
+        <td>
+          209
+        </td>
+        <td>
+          4058
+          -
+          4058
+        </td>
+        <td>
+          Literal
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          ()
+        </td>
+      </tr><tr>
+        <td>
+          152
+        </td>
+        <td>
+          199
+        </td>
+        <td>
+          4065
+          -
+          4074
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.ResultSet.next
+        </td>
+        <td style="background: #AEF1AE">
+          rs.next()
+        </td>
+      </tr><tr>
+        <td>
+          152
+        </td>
+        <td>
+          208
+        </td>
+        <td>
+          4093
+          -
+          4253
+        </td>
+        <td>
+          Block
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          {
+  buf.+=(com.knol.core.Session.apply(rs.getString(&quot;Topic&quot;), rs.getString(&quot;Date&quot;), rs.getInt(&quot;Knol_Id&quot;), scala.Some.apply[Int](rs.getInt(&quot;Id&quot;))));
+  while$1()
+}
+        </td>
+      </tr><tr>
+        <td>
+          152
+        </td>
+        <td>
+          210
+        </td>
+        <td>
+          4058
+          -
+          4058
+        </td>
+        <td>
+          Block
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          ()
+        </td>
+      </tr><tr>
+        <td>
+          154
+        </td>
+        <td>
+          200
+        </td>
+        <td>
+          4109
+          -
+          4130
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.ResultSet.getString
+        </td>
+        <td style="background: #AEF1AE">
+          rs.getString(&quot;Topic&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          154
+        </td>
+        <td>
+          205
+        </td>
+        <td>
+          4100
+          -
+          4253
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          com.knol.core.Session.apply
+        </td>
+        <td style="background: #AEF1AE">
+          com.knol.core.Session.apply(rs.getString(&quot;Topic&quot;), rs.getString(&quot;Date&quot;), rs.getInt(&quot;Knol_Id&quot;), scala.Some.apply[Int](rs.getInt(&quot;Id&quot;)))
+        </td>
+      </tr><tr>
+        <td>
+          154
+        </td>
+        <td>
+          207
+        </td>
+        <td>
+          4097
+          -
+          4097
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          com.knol.core.impl.SessionRepoImpl.while$1
+        </td>
+        <td style="background: #AEF1AE">
+          while$1()
+        </td>
+      </tr><tr>
+        <td>
+          154
+        </td>
+        <td>
+          206
+        </td>
+        <td>
+          4093
+          -
+          4253
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          scala.collection.mutable.ListBuffer.+=
+        </td>
+        <td style="background: #AEF1AE">
+          buf.+=(com.knol.core.Session.apply(rs.getString(&quot;Topic&quot;), rs.getString(&quot;Date&quot;), rs.getInt(&quot;Knol_Id&quot;), scala.Some.apply[Int](rs.getInt(&quot;Id&quot;))))
+        </td>
+      </tr><tr>
+        <td>
+          155
+        </td>
+        <td>
+          201
+        </td>
+        <td>
+          4150
+          -
+          4170
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.ResultSet.getString
+        </td>
+        <td style="background: #AEF1AE">
+          rs.getString(&quot;Date&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          156
+        </td>
+        <td>
+          202
+        </td>
+        <td>
+          4190
+          -
+          4210
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.ResultSet.getInt
+        </td>
+        <td style="background: #AEF1AE">
+          rs.getInt(&quot;Knol_Id&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          157
+        </td>
+        <td>
+          204
+        </td>
+        <td>
+          4229
+          -
+          4252
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          scala.Some.apply
+        </td>
+        <td style="background: #AEF1AE">
+          scala.Some.apply[Int](rs.getInt(&quot;Id&quot;))
+        </td>
+      </tr><tr>
+        <td>
+          157
+        </td>
+        <td>
+          203
+        </td>
+        <td>
+          4235
+          -
+          4250
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.ResultSet.getInt
+        </td>
+        <td style="background: #AEF1AE">
+          rs.getInt(&quot;Id&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          159
+        </td>
+        <td>
+          211
+        </td>
+        <td>
+          4289
+          -
+          4299
+        </td>
+        <td>
+          Select
+        </td>
+        <td>
+          scala.collection.mutable.ListBuffer.toList
+        </td>
+        <td style="background: #AEF1AE">
+          buf.toList
+        </td>
+      </tr><tr>
+        <td>
+          160
+        </td>
+        <td>
+          212
+        </td>
+        <td>
+          4312
+          -
+          4353
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          org.slf4j.Logger.debug
+        </td>
+        <td style="background: #AEF1AE">
+          SessionRepoImpl.this.logger.debug(&quot;Fetching a Session record&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          161
+        </td>
+        <td>
+          213
+        </td>
+        <td>
+          4366
+          -
+          4379
+        </td>
+        <td>
+          Select
+        </td>
+        <td>
+          scala.collection.TraversableLike.headOption
+        </td>
+        <td style="background: #AEF1AE">
+          Ls.headOption
+        </td>
+      </tr><tr>
+        <td>
+          163
+        </td>
+        <td>
+          214
+        </td>
+        <td>
+          4415
+          -
+          4419
+        </td>
+        <td>
+          Select
+        </td>
+        <td>
+          scala.None
+        </td>
+        <td style="background: #F0ADAD">
+          scala.None
+        </td>
+      </tr><tr>
+        <td>
+          167
+        </td>
+        <td>
+          216
+        </td>
+        <td>
+          4492
+          -
+          4546
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          org.slf4j.Logger.error
+        </td>
+        <td style="background: #AEF1AE">
+          SessionRepoImpl.this.logger.error(&quot;Error Occured: Cannot fetch the record&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          168
+        </td>
+        <td>
+          217
+        </td>
+        <td>
+          4557
+          -
+          4561
+        </td>
+        <td>
+          Select
+        </td>
+        <td>
+          scala.None
+        </td>
+        <td style="background: #AEF1AE">
+          scala.None
+        </td>
+      </tr><tr>
+        <td>
+          170
+        </td>
+        <td>
+          220
+        </td>
+        <td>
+          4588
+          -
+          4691
+        </td>
+        <td>
+          Match
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          connection match {
+  case (x: java.sql.Connection)Some[java.sql.Connection]((conn @ _)) =&gt; conn.close()
+  case scala.None =&gt; ()
+}
+        </td>
+      </tr><tr>
+        <td>
+          171
+        </td>
+        <td>
+          218
+        </td>
+        <td>
+          4636
+          -
+          4648
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.Connection.close
+        </td>
+        <td style="background: #AEF1AE">
+          conn.close()
+        </td>
+      </tr><tr>
+        <td>
+          172
+        </td>
+        <td>
+          219
+        </td>
+        <td>
+          4675
+          -
+          4677
+        </td>
+        <td>
+          Literal
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #F0ADAD">
+          ()
+        </td>
+      </tr><tr>
+        <td>
+          184
+        </td>
+        <td>
+          222
+        </td>
+        <td>
+          4905
+          -
+          4924
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          com.knol.db.connection.DBConnection.getConnection
+        </td>
+        <td style="background: #AEF1AE">
+          SessionRepoImpl.this.getConnection(scala.None)
+        </td>
+      </tr><tr>
+        <td>
+          184
+        </td>
+        <td>
+          221
+        </td>
+        <td>
+          4919
+          -
+          4923
+        </td>
+        <td>
+          Select
+        </td>
+        <td>
+          scala.None
+        </td>
+        <td style="background: #AEF1AE">
+          scala.None
+        </td>
+      </tr><tr>
+        <td>
+          188
+        </td>
+        <td>
+          241
+        </td>
+        <td>
+          4947
+          -
+          5546
+        </td>
+        <td>
+          Match
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          connection match {
+  case (x: java.sql.Connection)Some[java.sql.Connection]((conn @ _)) =&gt; {
+    val statement: java.sql.Statement = conn.createStatement();
+    val rs: java.sql.ResultSet = statement.executeQuery(&quot;SELECT * FROM knolx&quot;);
+    val buf: scala.collection.mutable.ListBuffer[com.knol.core.Session] = new scala.collection.mutable.ListBuffer[com.knol.core.Session]();
+    while$2(){
+      if (rs.next())
+        {
+          buf.+=(com.knol.core.Session.apply(rs.getString(&quot;Topic&quot;), rs.getString(&quot;Date&quot;), rs.getInt(&quot;Knol_Id&quot;), scala.Some.apply[Int](rs.getInt(&quot;Id&quot;))));
+          while$2()
+        }
+      else
+        ()
+    };
+    SessionRepoImpl.this.logger.debug(&quot;Fetching a List of all available Session records&quot;);
+    buf.toList
+  }
+  case scala.None =&gt; immutable.this.Nil
+}
+        </td>
+      </tr><tr>
+        <td>
+          190
+        </td>
+        <td>
+          223
+        </td>
+        <td>
+          5036
+          -
+          5058
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.Connection.createStatement
+        </td>
+        <td style="background: #AEF1AE">
+          conn.createStatement()
+        </td>
+      </tr><tr>
+        <td>
+          191
+        </td>
+        <td>
+          224
+        </td>
+        <td>
+          5080
+          -
+          5125
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.Statement.executeQuery
+        </td>
+        <td style="background: #AEF1AE">
+          statement.executeQuery(&quot;SELECT * FROM knolx&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          192
+        </td>
+        <td>
+          225
+        </td>
+        <td>
+          5148
+          -
+          5171
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          scala.collection.mutable.ListBuffer.&lt;init&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          new scala.collection.mutable.ListBuffer[com.knol.core.Session]()
+        </td>
+      </tr><tr>
+        <td>
+          194
+        </td>
+        <td>
+          236
+        </td>
+        <td>
+          5185
+          -
+          5185
+        </td>
+        <td>
+          Literal
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          ()
+        </td>
+      </tr><tr>
+        <td>
+          194
+        </td>
+        <td>
+          226
+        </td>
+        <td>
+          5192
+          -
+          5201
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.ResultSet.next
+        </td>
+        <td style="background: #AEF1AE">
+          rs.next()
+        </td>
+      </tr><tr>
+        <td>
+          194
+        </td>
+        <td>
+          235
+        </td>
+        <td>
+          5219
+          -
+          5379
+        </td>
+        <td>
+          Block
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          {
+  buf.+=(com.knol.core.Session.apply(rs.getString(&quot;Topic&quot;), rs.getString(&quot;Date&quot;), rs.getInt(&quot;Knol_Id&quot;), scala.Some.apply[Int](rs.getInt(&quot;Id&quot;))));
+  while$2()
+}
+        </td>
+      </tr><tr>
+        <td>
+          194
+        </td>
+        <td>
+          237
+        </td>
+        <td>
+          5185
+          -
+          5185
+        </td>
+        <td>
+          Block
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          ()
+        </td>
+      </tr><tr>
+        <td>
+          195
+        </td>
+        <td>
+          227
+        </td>
+        <td>
+          5235
+          -
+          5256
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.ResultSet.getString
+        </td>
+        <td style="background: #AEF1AE">
+          rs.getString(&quot;Topic&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          195
+        </td>
+        <td>
+          232
+        </td>
+        <td>
+          5226
+          -
+          5379
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          com.knol.core.Session.apply
+        </td>
+        <td style="background: #AEF1AE">
+          com.knol.core.Session.apply(rs.getString(&quot;Topic&quot;), rs.getString(&quot;Date&quot;), rs.getInt(&quot;Knol_Id&quot;), scala.Some.apply[Int](rs.getInt(&quot;Id&quot;)))
+        </td>
+      </tr><tr>
+        <td>
+          195
+        </td>
+        <td>
+          234
+        </td>
+        <td>
+          5223
+          -
+          5223
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          com.knol.core.impl.SessionRepoImpl.while$2
+        </td>
+        <td style="background: #AEF1AE">
+          while$2()
+        </td>
+      </tr><tr>
+        <td>
+          195
+        </td>
+        <td>
+          233
+        </td>
+        <td>
+          5219
+          -
+          5379
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          scala.collection.mutable.ListBuffer.+=
+        </td>
+        <td style="background: #AEF1AE">
+          buf.+=(com.knol.core.Session.apply(rs.getString(&quot;Topic&quot;), rs.getString(&quot;Date&quot;), rs.getInt(&quot;Knol_Id&quot;), scala.Some.apply[Int](rs.getInt(&quot;Id&quot;))))
+        </td>
+      </tr><tr>
+        <td>
+          196
+        </td>
+        <td>
+          228
+        </td>
+        <td>
+          5276
+          -
+          5296
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.ResultSet.getString
+        </td>
+        <td style="background: #AEF1AE">
+          rs.getString(&quot;Date&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          197
+        </td>
+        <td>
+          229
+        </td>
+        <td>
+          5316
+          -
+          5336
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.ResultSet.getInt
+        </td>
+        <td style="background: #AEF1AE">
+          rs.getInt(&quot;Knol_Id&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          198
+        </td>
+        <td>
+          231
+        </td>
+        <td>
+          5355
+          -
+          5378
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          scala.Some.apply
+        </td>
+        <td style="background: #AEF1AE">
+          scala.Some.apply[Int](rs.getInt(&quot;Id&quot;))
+        </td>
+      </tr><tr>
+        <td>
+          198
+        </td>
+        <td>
+          230
+        </td>
+        <td>
+          5361
+          -
+          5376
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.ResultSet.getInt
+        </td>
+        <td style="background: #AEF1AE">
+          rs.getInt(&quot;Id&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          200
+        </td>
+        <td>
+          238
+        </td>
+        <td>
+          5406
+          -
+          5470
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          org.slf4j.Logger.debug
+        </td>
+        <td style="background: #AEF1AE">
+          SessionRepoImpl.this.logger.debug(&quot;Fetching a List of all available Session records&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          202
+        </td>
+        <td>
+          239
+        </td>
+        <td>
+          5484
+          -
+          5494
+        </td>
+        <td>
+          Select
+        </td>
+        <td>
+          scala.collection.mutable.ListBuffer.toList
+        </td>
+        <td style="background: #AEF1AE">
+          buf.toList
+        </td>
+      </tr><tr>
+        <td>
+          204
+        </td>
+        <td>
+          240
+        </td>
+        <td>
+          5530
+          -
+          5536
+        </td>
+        <td>
+          Select
+        </td>
+        <td>
+          scala.collection.immutable.Nil
+        </td>
+        <td style="background: #F0ADAD">
+          immutable.this.Nil
+        </td>
+      </tr><tr>
+        <td>
+          208
+        </td>
+        <td>
+          242
+        </td>
+        <td>
+          5609
+          -
+          5657
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          org.slf4j.Logger.error
+        </td>
+        <td style="background: #AEF1AE">
+          SessionRepoImpl.this.logger.error(&quot;Error Occured: Cannot fetch list&quot;)
+        </td>
+      </tr><tr>
+        <td>
+          209
+        </td>
+        <td>
+          243
+        </td>
+        <td>
+          5668
+          -
+          5674
+        </td>
+        <td>
+          Select
+        </td>
+        <td>
+          scala.collection.immutable.Nil
+        </td>
+        <td style="background: #AEF1AE">
+          immutable.this.Nil
+        </td>
+      </tr><tr>
+        <td>
+          211
+        </td>
+        <td>
+          246
+        </td>
+        <td>
+          5701
+          -
+          5804
+        </td>
+        <td>
+          Match
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #AEF1AE">
+          connection match {
+  case (x: java.sql.Connection)Some[java.sql.Connection]((conn @ _)) =&gt; conn.close()
+  case scala.None =&gt; ()
+}
+        </td>
+      </tr><tr>
+        <td>
+          212
+        </td>
+        <td>
+          244
+        </td>
+        <td>
+          5749
+          -
+          5761
+        </td>
+        <td>
+          Apply
+        </td>
+        <td>
+          java.sql.Connection.close
+        </td>
+        <td style="background: #AEF1AE">
+          conn.close()
+        </td>
+      </tr><tr>
+        <td>
+          213
+        </td>
+        <td>
+          245
+        </td>
+        <td>
+          5788
+          -
+          5790
+        </td>
+        <td>
+          Literal
+        </td>
+        <td>
+          &lt;nosymbol&gt;
+        </td>
+        <td style="background: #F0ADAD">
+          ()
+        </td>
+      </tr>
+    </table>
+          </div>
+        </div>
+      </body>
+    </html>
